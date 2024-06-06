@@ -13,6 +13,8 @@ parser = argparse.ArgumentParser(description='Mitochondrial informative mutation
 parser.add_argument('input_folder', help='Path of the cellsnp output folder.')
 parser.add_argument('output_folder', help='Path of the output folder.')
 args = parser.parse_args()
+print("Input folder: %s" % args.input_folder)
+print("Output folder: %s" % args.output_folder)
 
 # sample = "gct86"
 # vcf_file = "/home/linxy29/data/maester/oagct/" + sample + "/maester_cellSNP/cellSNP.cells.vcf.gz"
