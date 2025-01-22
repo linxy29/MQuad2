@@ -1,123 +1,144 @@
-=====
-MQuad
-=====
+# MQuad Complementing Scripts
 
-MQuad: Mixture Model for Mitochondrial Mutation detection in single-cell omics data
+This tutorial provides guidance on using two Python scripts that complement the MQuad model for selecting informative mutations and analyzing mitochondrial DNA (mtDNA) mutations. These scripts provide 1) the beta-binomial mode for MQuad; 2) the ability to select a predefined number of top informative variants based on deltaBIC scores.
+The original MQuad model is available at: https://github.com/single-cell-genetics/MQuad/tree/c2d750c5f279dca4f200274fc126d89e619fdd58
 
-MQuad is a tool that detects mitochondrial mutations that are informative for clonal substructure inference. It uses a binomial mixture model to assess the heteroplasmy of mtDNA variants among background noise.
+This repository will **keep updating** to fulfill requirements from users. If you're interested in those updates, please **star** this repository to stay informed!
 
-A recommended pipeline to generate the neccessary files:
+### Setting Up the Environment
 
-1. use `cellSNP <https://github.com/single-cell-genetics/cellSNP>`_ or `cellsnp-lite <https://github.com/single-cell-genetics/cellsnp-lite>`_ (a faster version of cellSNP, still at testing stage so might be unstable) to pileup mtDNA variants from raw .bam file(s)
+To use these scripts, ensure the required Python environment is properly configured. Follow these steps:
 
-2. use MQuad to differentiate informative mtDNA variants from noisy backbground
+1. **Install Dependencies**:
+   Make sure you have Python 3.7 or later installed, and install the required packages using `pip`:
+   ```bash
+   pip install numpy pandas scipy matplotlib seaborn vireoSNP mquad
+   ```
 
-3. use `vireoSNP <https://github.com/single-cell-genetics/vireo>`_ to assign cells to clones based on mtDNA variant profile
+2. **Clone the Repository**:
+   Clone the repository containing the scripts:
+   ```bash
+   git clone https://github.com/linxy29/MQuad2.git
+   cd mquad-scripts
+   ```
+
+3. **Prepare Input Data**:
+   Ensure you have the necessary input files, including AD and DP matrices and a VCF file containing variant information. These can be generated using tools like cellSNP.
+
+4. **Test the Setup**:
+   Run a quick test using the example dataset provided with MQuad. The dataset includes:
+   - 500 background variants.
+   - 9 variants highlighted in Ludwig et al., *Cell*, 2019 (Supp Fig. 2F and main Fig. 2F).
+   - 1 additional informative variant not mentioned in the paper.
+
+   **Test Command**:
+   ```bash
+   mquad --vcfData example/example.vcf.gz -o example_test -p 5
+   ```
+   or with batch mode:
+   ```bash
+   mquad --vcfData example/example.vcf.gz -o example_test -p 5 --batchFit 1 --batchSize 5
+   ```
+
+Once the environment is set up, you can use the provided scripts for extended analysis.
+
+## Script 1: Selecting Informative Mutations (`test_betabin.py`)
+
+### Purpose
+
+This script identifies informative mutations using the MQuad model. The key parameters are dynamically configurable via command-line arguments.
+
+### Usage
+
+```bash
+python test_betabin.py --input_folder <input_folder> --output_folder <output_folder> --nproc <nproc> --minDP <minDP>
+```
+
+### Arguments
+
+- `--input_folder`: Path to the input folder containing `cellSNP` output files.
+- `--output_folder`: Path to the folder where results will be saved.
+- `--nproc`: Number of processors to use for parallel computation (default: 16).
+- `--minDP`: Minimum depth of coverage for variants (default: 2).
+
+### Example
+
+```bash
+python test_betabin.py --input_folder ./example_input --output_folder ./example_output --nproc 32 --minDP 5
+```
+
+### Output
+
+The script saves the following:
+
+- Delta BIC values.
+- A list of selected informative variants.
+- Optionally, heatmaps and allele frequency matrices.
+
+## Script 2: Selecting Predefined Number of Variants (`run_numbcutoff.py`)
+
+### Purpose
+
+This script allows selecting a predefined number of top informative variants based on deltaBIC scores.
+
+### Usage
+
+```bash
+python run_numbcutoff.py --input_folder <input_folder> --output_folder <output_folder> --num_variants <num_variants> --nproc <nproc> --minDP <minDP>
+```
+
+### Arguments
+
+- `--input_folder`: Path to the input folder containing `cellSNP` output files.
+- `--output_folder`: Path to the folder where results will be saved.
+- `--num_variants`: Number of top variants to select (default: None).
+- `--nproc`: Number of processors to use for parallel computation (default: 32).
+- `--minDP`: Minimum depth of coverage for variants (default: 2).
+
+### Example
+
+```bash
+python run_numbcutoff.py --input_folder ./example_input --output_folder ./example_output --num_variants 2000 --nproc 32 --minDP 5
+```
+
+### Output
+
+The script saves:
+
+- The sorted deltaBIC values.
+- The top N informative variants as specified by the `--num_variants` argument.
+- Heatmaps and matrices of allele frequencies (optional).
+
+## General Notes
+
+- **Heatmaps**: Heatmaps are generated to visualize allele frequencies of selected variants. These are saved in the output folder.
+- **Output Matrices**: Passed AD and DP matrices are exported as `.mtx` files for further analysis.
+- **Knee Point Detection**: If no cutoff or predefined number of variants is provided, the scripts automatically determine the optimal threshold for variant selection using the knee point method.
+
+## Common Questions
+
+### 1. What is the difference between the two scripts?
+- `test_betabin.py` is designed for identifying informative mutations using the beta-binomial model in MQuad.
+- `run_numbcutoff.py` allows you to specify a fixed number of top variants based on deltaBIC scores, offering flexibility for predefined variant selection.
+
+### 2. Can I use these scripts independently of MQuad?
+No, these scripts complement the MQuad model and rely on its outputs (e.g., deltaBIC scores and variant data).
+
+### 3. How do I prepare input data for these scripts?
+Ensure you have:
+- AD and DP matrices (e.g., from cellSNP outputs).
+- A VCF file containing variant information.
+
+### 4. How do I troubleshoot common errors?
+- **File Not Found**: Verify the input file paths and folder permissions.
+- **Permission Denied**: Ensure you have write permissions for the output directory.
+- **Incomplete Outputs**: Check for memory or CPU limitations and consider increasing resources.
+
+### 5. Can I modify parameters for better performance?
+Yes, both scripts allow customization of parameters like `--nproc`, `--minDP`, and `--num_variants`. Adjust these based on your dataset and computational resources.
+
+### 6. What is the recommended cutoff for selecting variants?
+If unsure, allow the script to automatically determine the cutoff using the knee point method. Alternatively, use domain knowledge to set a custom `--num_variants` or `--minDP`.
 
 
-Different upstream/downstream packages can also be used if the neccesary file formats are available.
 
-If you are too lazy to dig into cellSNP's usage, a preprocessing_cmds.sh is also available in the examples folder which shows the shell commands for cellSNP. (With more updates coming)
-
-OS requirements
-===============
-
-This package has been tested on the following systems with Python 3.8.8:
-
-* Windows: Windows 10
-* Linux: CentOS Linux 7 (Core)
-
-Installation
-============
-
-MQuad is available through `PyPI <https://pypi.org/project/mquad/>`_. To install, type the following command line and add ``-U`` for updates:
-
-.. code-block:: bash
-
-  pip install -U mquad
-
-Alternatively, you can install from this GitHub repository for latest (often development) version by the following command line:
-
-.. code-block:: bash
-
-  pip install -U git+https://github.com/single-cell-genetics/MQuad
-
-Installation time: < 1 min
-
-Manual
-======
-
-Once installed, you can first check the version and input parameters with ``mquad -h`` 
-
-MQuad recognizes 3 types of input:
-
-1. cellSNP output folder with AD and DP sparse matrices (.mtx)
-
-.. code-block:: bash
-
-  mquad -c $INPUT_DIR -o $OUT_DIR -p 20
-
-2. .vcf only
-
-.. code-block:: bash
-
-  mquad --vcfData $VCF -o $OUT_DIR -p 20
-
-3. AD and DP sparse matrices (.mtx), comma separated
-
-.. code-block:: bash
-
-  mquad -m cellSNP.tag.AD.mtx, cellSNP.tag.DP.mtx -o $OUT_DIR -p 20
-  
-For droplet-based sequencing data, eg. 10X Chromium CNV, scATAC..etc, it is recommended to add ``--minDP 5`` or a smaller value to prevent errors during fitting. The default value is 10, which is suitable for Smart-seq2 data but might be too stringent for low sequencing depth data.
-
-The output files will be explained below in the 'Example' section.
-
-Example
-=======
-
-MQuad comes with an example dataset for you to test things out. The mtDNA mutations of this dataset are extracted from `Ludwig et al, Cell, 2019 <https://doi.org/10.1016/j.cell.2019.01.022>`_. It contains 500 background variants, along with 9 variants used in Supp Fig. 2F (and main Fig. 2F). There is also 1 additional variant that is informative but not mentioned in the paper. In total, there are 510 variants in the example dataset.
-
-Run the following command line:
-
-.. code-block:: bash
-
-  mquad --vcfData example/example.vcf.gz -o example_test -p 5
-  
-or using batch mode tailored for mixture-binomial modelling:
-
-.. code-block:: bash
-
-  mquad --vcfData example/example.vcf.gz -o example_test -p 5 --batchFit 1 --batchSize 5
-  
-The output files should include:
-
-* passed_ad.mtx, passed_dp.mtx: Sparse matrix files of the AD/DP of qualified variants for downstream clonal analysis
-* top variants heatmap.pdf: Heatmap of the allele frequency of qualified variants
-
-.. image:: images/top_variants_heatmap.png
-    :width: 600px
-    :align: center
-    :height: 400px
-    
-* deltaBIC_cdf.pdf: A cdf plot of deltaBIC distribution of all variants, including the cutoff determined by MQuad
-
-.. image:: images/deltaBIC_cdf.png
-    :width: 600px
-    :align: center
-    :height: 400px
-    
-* BIC_params.csv: A spreadsheet containing detailed parameters/statistics of all variants, sorted from highest deltaBIC to lowest
-* debug_unsorted_BIC_params.csv: Same spreadsheet as BIC_params.csv but unsorted, for developers' debugging purpose, will probably be removed on later versions of MQuad
-
-Typical run time: ~10 seconds
-
-Column description for BIC_params.csv:
-
-* num_cells: number of cells passing the sequencing depth threshold (default 10)
-* deltaBIC: score of informativeness, higher is better
-* params1, params2, model1BIC, model2BIC: fitted parameteres for the binomial model, for debugging purposes
-* num_cells_nonzero_AD, total_DP, median_DP, total_AD, median_AD: self explanatory
-* new_mutations, as_mutation: some classification criteria that does not affect the filtering, again for debugging purposes
-* fraction_b_allele: the fraction of minor allele in the minor component (NOT equal to allele frequency)
-* num_cells_minor_cpt: no. of cells in the minor component, used to filtering variants that only happens in 1 or 2 cells
